@@ -1,0 +1,223 @@
+{
+    "name": "DATA_INJESTION_TO_DATA_LAKE",
+    "properties": {
+        "activities": [
+            {
+                "name": "ForEach1",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "Look for each input",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('Look for each input').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "Copy Activity inside ForEach",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "DelimitedTextSource",
+                                    "storeSettings": {
+                                        "type": "HttpReadSettings",
+                                        "requestMethod": "GET"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextReadSettings"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".txt"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "CSV_DATASOURCE_GITHUB_DS",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "csv_relative_url": {
+                                            "value": "@item().csv_relative_url",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "CSV_DATASINK_ADLS",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "file_name": {
+                                            "value": "@item().file_name",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "DATA FROM SQL TO ADLS",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "ForEach1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "MySqlSource"
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".txt"
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "MYSQL_DS",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "SQL_TO_ADLS_DS",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "Look for each input",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "JsonSource",
+                        "storeSettings": {
+                            "type": "HttpReadSettings",
+                            "requestMethod": "GET"
+                        },
+                        "formatSettings": {
+                            "type": "JsonReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "JSON_DS",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            }
+        ],
+        "parameters": {
+            "foreachinput": {
+                "type": "array",
+                "defaultValue": [
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_customers_dataset.csv",
+                        "file_name": "olist_customers_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_geolocation_dataset.csv",
+                        "file_name": "olist_geolocation_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_order_items_dataset.csv",
+                        "file_name": "olist_order_items_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_orders_dataset.csv",
+                        "file_name": "olist_orders_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_products_dataset.csv",
+                        "file_name": "olist_products_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_sellers_dataset.csv",
+                        "file_name": "olist_sellers_dataset.csv"
+                    },
+                    {
+                        "csv_relative_url": "BigDataProjects/refs/heads/main/Data/olist_order_reviews_dataset.csv",
+                        "file_name": "olist_order_reviews_dataset.csv"
+                    }
+                ]
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-06-01T22:35:04Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
